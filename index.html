@@ -794,27 +794,7 @@ function renderHolding(h){
   </div>`;
 }
 
-// ══════════════════════════════════════════
-// RENDER FILTERS
-// ══════════════════════════════════════════
-function renderFilters(containerId, data, holdingContainerId){
-  const sectors=[...new Set(data.map(h=>h.sector))];
-  const container=document.getElementById(containerId);
-  const holdingContainer=document.getElementById(holdingContainerId);
 
-  let active='All';
-  function render(filter){
-    active=filter;
-    container.innerHTML=`<button class="filter-pill ${filter==='All'?'active':''}" onclick="filterHoldings('${containerId}','${holdingContainerId}','All')">All</button>`
-      +sectors.map(s=>`<button class="filter-pill ${filter===s?'active':''}" onclick="filterHoldings('${containerId}','${holdingContainerId}','${s}')">${s}</button>`).join('');
-    const filtered=filter==='All'?data:data.filter(h=>h.sector===filter);
-    holdingContainer.innerHTML=filtered.map(renderHolding).join('');
-  }
-  window['filterHoldings']=function(cid,hid,f){
-    if(cid===containerId)render(f);
-  };
-  render('All');
-}
 
 // ══════════════════════════════════════════
 // RENDER ACTION QUEUE
@@ -912,55 +892,26 @@ function renderWatchlist(){
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
+function filterHoldings(cid, hid, f) {
+  const isTrad = cid === 'trad-filters';
+  const data = isTrad ? TRADITIONAL : ROTH_HSA;
+  const pills = isTrad
+    ? ['All', ...[...new Set(data.map(h => h.sector))]]
+    : ['All', 'ROTH', 'HSA'];
+  document.getElementById(cid).innerHTML = pills.map(p =>
+    `<button class="filter-pill ${f===p?'active':''}" onclick="filterHoldings('${cid}','${hid}','${p}')">${p}</button>`
+  ).join('');
+  const filtered = f === 'All' ? data : data.filter(h => isTrad ? h.sector === f : h.account === f);
+  document.getElementById(hid).innerHTML = filtered.map(renderHolding).join('');
+}
+
 renderActions();
 renderSleeveSummary();
-renderFilters('trad-filters','trad-holdings',TRADITIONAL,'trad-holdings');
-renderFilters('roth-filters','roth-holdings',ROTH_HSA,'roth-holdings');
+filterHoldings('trad-filters', 'trad-holdings', 'All');
+filterHoldings('roth-filters', 'roth-holdings', 'All');
 renderSectors();
 renderWatchlist();
-
-// Fix filter function to handle both datasets
-window.filterHoldings=function(cid,hid,f){
-  const data=cid==='trad-filters'?TRADITIONAL:ROTH_HSA;
-  const sectors=[...new Set(data.map(h=>h.sector))];
-  document.getElementById(cid).innerHTML=
-    `<button class="filter-pill ${f==='All'?'active':''}" onclick="filterHoldings('${cid}','${hid}','All')">All</button>`
-    +sectors.map(s=>`<button class="filter-pill ${f===s?'active':''}" onclick="filterHoldings('${cid}','${hid}','${s}')">${s}</button>`).join('');
-  const filtered=f==='All'?data:data.filter(h=>h.sector===f);
-  document.getElementById(hid).innerHTML=filtered.map(renderHolding).join('');
-};
-
-// Initial filter renders
-(function(){
-  const tradSectors=[...new Set(TRADITIONAL.map(h=>h.sector))];
-  document.getElementById('trad-filters').innerHTML=
-    `<button class="filter-pill active" onclick="filterHoldings('trad-filters','trad-holdings','All')">All</button>`
-    +tradSectors.map(s=>`<button class="filter-pill" onclick="filterHoldings('trad-filters','trad-holdings','${s}')">${s}</button>`).join('');
-  document.getElementById('trad-holdings').innerHTML=TRADITIONAL.map(renderHolding).join('');
-
-  const rothSectors=[...new Set(ROTH_HSA.map(h=>h.account))];
-  document.getElementById('roth-filters').innerHTML=
-    `<button class="filter-pill active" onclick="filterHoldings('roth-filters','roth-holdings','All')">All</button>`
-    +['ROTH','HSA'].map(s=>`<button class="filter-pill" onclick="filterHoldings('roth-filters','roth-holdings','${s}')">${s}</button>`).join('');
-  document.getElementById('roth-holdings').innerHTML=ROTH_HSA.map(renderHolding).join('');
-
-  // Override Roth filter to use account field
-  const origFilter=window.filterHoldings;
-  window.filterHoldings=function(cid,hid,f){
-    if(cid==='roth-filters'){
-      const data=ROTH_HSA;
-      document.getElementById(cid).innerHTML=
-        `<button class="filter-pill ${f==='All'?'active':''}" onclick="filterHoldings('${cid}','${hid}','All')">All</button>`
-        +['ROTH','HSA'].map(s=>`<button class="filter-pill ${f===s?'active':''}" onclick="filterHoldings('${cid}','${hid}','${s}')">${s}</button>`).join('');
-      const filtered=f==='All'?data:data.filter(h=>h.account===f);
-      document.getElementById(hid).innerHTML=filtered.map(renderHolding).join('');
-    } else {
-      origFilter(cid,hid,f);
-    }
-  };
-
-  document.getElementById('last-updated').textContent='Updated '+new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-})();
+document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
 </script>
 </body>
 </html>
